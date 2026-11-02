@@ -436,6 +436,48 @@ table tr:hover td{background:rgba(255,153,0,0.05);}
 .loading-box .spinner{width:44px;height:44px;border:4px solid #f3f3f3;border-top:4px solid var(--accent-gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px;}
 .loading-box .load-text{font-weight:900;color:var(--accent-blue);font-size:14px;}
 @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+/* ============================================================
+   REPORT CARD MODULE — ADDED
+   ============================================================ */
+.rc-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;background:var(--bg-primary);padding:6px;border-radius:var(--radius);border:1px solid var(--border-color);}
+.rc-tab{padding:6px 14px;background:#fff;border:1px solid var(--border-color);border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;color:var(--text-secondary);}
+.rc-tab:hover{border-color:var(--accent-gold);color:var(--accent-gold);}
+.rc-tab.active{background:var(--accent-gold);color:#fff;border-color:var(--accent-gold);}
+.rc-tab.highlight{border-left:3px solid var(--accent-green);}
+.rc-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:linear-gradient(135deg,#131921,#1a2530);border-radius:8px;margin-bottom:12px;color:#fff;}
+.rc-toolbar select,.rc-toolbar input{padding:6px 10px;border:1px solid var(--border-color);border-radius:4px;font-size:13px;background:#fff;color:#131921;font-weight:600;min-width:150px;}
+.rc-toolbar .rc-spacer{flex:1;}
+.rc-toolbar .rc-label{font-weight:900;color:var(--accent-gold);font-size:12px;}
+.rc-table-wrap{overflow-x:auto;background:#fff;border-radius:8px;box-shadow:var(--shadow);max-height:600px;overflow-y:auto;}
+.rc-table{border-collapse:collapse;width:100%;min-width:1000px;font-size:12px;}
+.rc-table th,.rc-table td{border:1px solid #d0d0d0;padding:5px 6px;text-align:center;}
+.rc-table th{background:#eef2ff;font-weight:700;color:#1e3a8a;position:sticky;top:0;z-index:2;font-size:11px;}
+.rc-table td.rc-subject-name{text-align:left;font-weight:600;}
+.rc-table td input.rc-input{width:50px;border:1px solid #ccc;border-radius:3px;padding:3px;text-align:center;font-size:11px;}
+.rc-table td input.rc-input:focus{outline:2px solid var(--accent-gold);}
+.rc-table .rc-col-total{background:#fef9c3 !important;font-weight:700;}
+.rc-table .rc-col-pct{background:#dcfce7 !important;font-weight:700;}
+.rc-table .rc-col-grade{background:#e0e7ff !important;font-weight:700;}
+.rc-table .rc-col-pos{background:#fce7f3 !important;font-weight:700;}
+.rc-table .rc-col-fail{color:#dc2626;font-weight:700;}
+.rc-table tr.rc-grand-total td{background:#1e3a8a !important;color:#fff !important;font-weight:900;font-size:13px;}
+.rc-att-cell{cursor:pointer;user-select:none;font-weight:900;width:22px;height:22px;}
+.rc-att-cell.P{background:#d1fae5 !important;color:#065f46;}
+.rc-att-cell.A{background:#fee2e2 !important;color:#991b1b;}
+.rc-att-cell.empty{background:#fff !important;color:#ccc;font-weight:400;}
+.rc-mpr-card{background:#fff;padding:22px;border-radius:10px;box-shadow:var(--shadow);max-width:1100px;margin:0 auto;}
+.rc-mpr-header{display:flex;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;border-bottom:2px solid #131921;padding-bottom:10px;}
+.rc-mpr-header .rc-student-name{font-size:20px;font-weight:900;color:#131921;}
+.rc-mpr-header .rc-meta{font-size:12px;color:#555;line-height:1.7;}
+.rc-mpr-header .rc-meta b{color:#1e3a8a;}
+@media print{
+  .rc-toolbar,.rc-actions,.sidebar,.top-bar{display:none !important;}
+  .rc-table-wrap{overflow:visible !important;max-height:none !important;box-shadow:none !important;}
+  .rc-table{font-size:9px !important;min-width:100% !important;}
+  .rc-table th,.rc-table td{padding:2px 3px !important;}
+  .rc-mpr-card{box-shadow:none !important;padding:0 !important;}
+}
 </style>
 </head>
 <body>
@@ -1911,6 +1953,8 @@ function setupSidebar(){
       <a data-tab="marksheet"><span class="emoji">📊</span> Marksheet Entry</a>
       <a data-tab="results"><span class="emoji">📈</span> Results</a>
       <a data-tab="comparison"><span class="emoji">📊</span> Comparative Analysis</a>
+            <div class="section-label">📋 Report Card</div>
+      <a data-tab="reportcard"><span class="emoji">📋</span> Monthly Report Card</a>
       <div class="section-label">📜 Certificates</div>
       <a data-tab="leavingcert"><span class="emoji">📜</span> Leaving Certificate</a>
       <a data-tab="charactercert"><span class="emoji">⭐</span> Character Certificate</a>
@@ -1935,6 +1979,8 @@ function setupSidebar(){
       <a data-tab="marksheet"><span class="emoji">📊</span> Marksheet Entry</a>
       <a data-tab="results"><span class="emoji">📈</span> Results</a>
       <a data-tab="comparison"><span class="emoji">📊</span> Comparative Analysis</a>
+            <div class="section-label">📋 Report Card</div>
+      <a data-tab="reportcard"><span class="emoji">📋</span> Monthly Report Card</a>
       <div class="section-label">📜 Certificates</div>
       <a data-tab="leavingcert"><span class="emoji">📜</span> Leaving Certificate</a>
       <a data-tab="charactercert"><span class="emoji">⭐</span> Character Certificate</a>
@@ -1993,6 +2039,7 @@ function showTab(tabName){
     case 'marksheet': renderMarksheetEntry(); break;
     case 'results': renderResults(); break;
     case 'comparison': renderComparison(); break;
+        case 'reportcard': renderReportCardModule(); break;
     case 'leavingcert': renderLeavingCertificate(); break;
     case 'charactercert': renderCharacterCertificate(); break;
     case 'birthcert': renderBirthCertificate(); break;
@@ -5695,7 +5742,347 @@ function printDynamicModule(moduleId){
     </body></html>`);
   win.document.close();
 }
+// ================================================================
+// 📋 REPORT CARD MODULE — FULL INTEGRATION
+// ================================================================
 
+const RC_SUBJECTS = [
+  { key:'english',  label:'ENGLISH',                match:['english'] },
+  { key:'bio',      label:'BIOLOGY / COMPUTER',     match:['biology','computer','bio','islamiyat elc'] },
+  { key:'pak',      label:'PAKISTAN STUDY',         match:['pakistan study','pak study','pak'] },
+  { key:'phy',      label:'PHYSICS / G.SCIENCE',    match:['physics','g.science','general science','phy'] },
+  { key:'urdu',     label:'URDU',                   match:['urdu'] },
+  { key:'isl',      label:'ISLAMIYAT',              match:['islamiyat','isl. study','islamiat'] },
+  { key:'chem',     label:'CHEMISTRY / EDUCATION',  match:['chemistry','education','chem'] },
+  { key:'math',     label:'MATH / G.MATH',          match:['math','mathematics','g.math'] },
+  { key:'tarjmah',  label:'TARJMAH-TUL-QURAN',      match:['tarjmah','tarjma','quran'] }
+];
+
+const RC_PERIOD = 'June, 2026';
+const RC_CLASS_DISPLAY = '9th Science, Arts';
+const RC_TOTAL_WORKING_DAYS = 25;
+
+let rcActiveTab = 'attendance';
+let rcSelectedStudentId = null;
+
+function rcPct(om, tm){
+  if(!tm || tm === 0) return 0;
+  const v = om / tm;
+  return isNaN(v) ? 0 : v;
+}
+function rcGrade(p){
+  if(p > 0.85) return 'A+';
+  if(p > 0.75) return 'A';
+  if(p > 0.65) return 'B';
+  if(p > 0.50) return 'C';
+  if(p > 0.40) return 'D';
+  if(p > 0.32) return 'E';
+  if(p < 0.33) return 'Fail';
+  return 'Fail';
+}
+function rcRanks(values){
+  const valid = values.filter(v => v.val !== null && !isNaN(v.val) && v.val > 0);
+  valid.sort((a,b) => b.val - a.val);
+  const ranks = {};
+  let lastVal = null, lastRank = 0;
+  valid.forEach((v,i) => {
+    if(v.val === lastVal){ ranks[v.index] = lastRank; }
+    else { ranks[v.index] = i + 1; lastRank = i + 1; lastVal = v.val; }
+  });
+  return ranks;
+}
+
+function rcGetSubjectData(student, subKey){
+  if(AppData.rcMarks && AppData.rcMarks[student.id + '__' + subKey]){
+    return { tests: AppData.rcMarks[student.id + '__' + subKey] };
+  }
+  const sub = RC_SUBJECTS.find(s => s.key === subKey);
+  if(!sub) return { tests: Array(6).fill({tm:'',om:''}) };
+  const ms = (AppData.marksheets || []).filter(m => m.studentId === student.id);
+  const emptyTests = Array.from({length:6}, () => ({tm:'', om:''}));
+  for(const sheet of ms){
+    const subjects = sheet.subjects || [];
+    const found = subjects.find(s =>
+      sub.match.some(kw => String(s.name || '').toLowerCase().includes(kw))
+    );
+    if(found){
+      const tests = [...emptyTests];
+      tests[0] = { tm: found.total || 100, om: found.obtained || 0 };
+      return { tests };
+    }
+  }
+  return { tests: emptyTests };
+}
+
+function rcGetAttendance(student){
+  const records = (AppData.attendance || []).filter(r => r.studentId === student.id && r.rcDayIndex !== undefined);
+  const arr = Array(31).fill('');
+  records.forEach(r => {
+    if(r.rcDayIndex >= 0 && r.rcDayIndex < 31){
+      arr[r.rcDayIndex] = r.status === 'Present' ? 'P' : r.status === 'Absent' ? 'A' : '';
+    }
+  });
+  return arr;
+}
+function rcAttendanceStats(arr){
+  const P = arr.filter(x => x === 'P').length;
+  const A = arr.filter(x => x === 'A').length;
+  const denom = RC_TOTAL_WORKING_DAYS;
+  return { present: P, absent: A, total: denom, pct: denom ? (P / denom) : 0 };
+}
+
+function rcSubjectTotals(student, subKey){
+  const data = rcGetSubjectData(student, subKey);
+  let tm = 0, om = 0;
+  data.tests.forEach(t => { tm += Number(t.tm) || 0; om += Number(t.om) || 0; });
+  const p = rcPct(om, tm);
+  return { tm, om, pct: p, grade: rcGrade(p), tests: data.tests };
+}
+
+function renderReportCardModule(){
+  const container = document.getElementById('contentArea');
+  let html = `
+    <div class="card">
+      <div class="card-title"><span class="prompt">&gt;&gt;&gt;</span> 📋 Monthly Report Card <span class="badge">Attendance + All Subjects + MPR + Transcript</span></div>
+      <div class="rc-toolbar">
+        <span class="rc-label">👤 Student:</span>
+        <select id="rcStudentSelect" onchange="rcSelectStudent(this.value)" style="min-width:220px;">
+          <option value="">-- Select Student --</option>
+          ${(AppData.students || []).map(s => `<option value="${s.id}">${s.admissionNo} - ${s.name}</option>`).join('')}
+        </select>
+        <span class="rc-label">📅 Period:</span>
+        <input id="rcPeriodInput" value="${RC_PERIOD}" style="min-width:150px;" />
+        <div class="rc-spacer"></div>
+        <button class="btn btn-success btn-sm" onclick="rcSaveAll()">💾 Save</button>
+        <button class="btn btn-primary btn-sm" onclick="rcPrint()">🖨️ Print</button>
+        <button class="wa-btn" onclick="rcWhatsApp()">📱 WhatsApp</button>
+      </div>
+      <div class="rc-tabs">
+        <div class="rc-tab ${rcActiveTab==='attendance'?'active':''}" onclick="rcSwitchTab('attendance')">📋 Attendance</div>
+        ${RC_SUBJECTS.map(s => `<div class="rc-tab ${rcActiveTab===s.key?'active':''}" onclick="rcSwitchTab('${s.key}')">${s.label.split(' / ')[0]}</div>`).join('')}
+        <div class="rc-tab highlight ${rcActiveTab==='mpr'?'active':''}" onclick="rcSwitchTab('mpr')">🏆 Final MPR</div>
+        <div class="rc-tab highlight ${rcActiveTab==='transcript'?'active':''}" onclick="rcSwitchTab('transcript')">📄 Transcript</div>
+      </div>
+      <div id="rcTabContent"></div>
+    </div>`;
+  container.innerHTML = html;
+  if(!rcSelectedStudentId && AppData.students && AppData.students.length > 0){
+    rcSelectedStudentId = AppData.students[0].id;
+    const sel = document.getElementById('rcStudentSelect');
+    if(sel) sel.value = rcSelectedStudentId;
+  }
+  rcRenderTab();
+}
+
+function rcSwitchTab(tab){
+  rcActiveTab = tab;
+  document.querySelectorAll('.rc-tab').forEach(t => t.classList.remove('active'));
+  const target = document.querySelector(`.rc-tab[onclick*="'${tab}'"]`);
+  if(target) target.classList.add('active');
+  rcRenderTab();
+}
+function rcSelectStudent(id){ rcSelectedStudentId = id; rcRenderTab(); }
+function rcRenderTab(){
+  const content = document.getElementById('rcTabContent');
+  if(!content) return;
+  content.innerHTML = '';
+  if(rcActiveTab === 'attendance') rcRenderAttendanceTab(content);
+  else if(rcActiveTab === 'mpr') rcRenderMPRTab(content);
+  else if(rcActiveTab === 'transcript') rcRenderTranscriptTab(content);
+  else {
+    const sub = RC_SUBJECTS.find(s => s.key === rcActiveTab);
+    if(sub) rcRenderSubjectTab(content, sub);
+  }
+}
+
+function rcRenderAttendanceTab(container){
+  const students = AppData.students || [];
+  if(students.length === 0){ container.innerHTML = '<p style="padding:20px;text-align:center;color:#999;">No students in database.</p>'; return; }
+  let html = '<div class="rc-table-wrap"><table class="rc-table"><thead><tr>';
+  html += '<th>Sr.</th><th>Name</th><th>ID</th>';
+  for(let d = 1; d <= 31; d++) html += `<th>${d}</th>`;
+  html += '<th class="rc-col-total">Days</th><th class="rc-col-pct">P</th><th class="rc-col-fail">A</th><th class="rc-col-grade">%</th>';
+  html += '</tr></thead><tbody>';
+  students.forEach((st, si) => {
+    const arr = rcGetAttendance(st);
+    const stats = rcAttendanceStats(arr);
+    html += `<tr><td>${si + 1}</td><td class="rc-subject-name">${st.name}</td><td>${st.admissionNo}</td>`;
+    arr.forEach((v, di) => {
+      html += `<td class="rc-att-cell ${v || 'empty'}" data-si="${si}" data-di="${di}">${v || '-'}</td>`;
+    });
+    html += `<td class="rc-col-total">${RC_TOTAL_WORKING_DAYS}</td><td class="rc-col-pct">${stats.present}</td><td class="rc-col-fail">${stats.absent}</td><td class="rc-col-grade">${(stats.pct*100).toFixed(1)}%</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  html += '<p style="font-size:11px;color:#666;padding:6px;">💡 Click any cell to cycle: blank → P → A → blank</p>';
+  container.innerHTML = html;
+  container.querySelectorAll('.rc-att-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const si = +cell.dataset.si;
+      const di = +cell.dataset.di;
+      const student = students[si];
+      if(!student) return;
+      const existingRec = (AppData.attendance || []).find(r => r.studentId === student.id && r.rcDayIndex === di);
+      let currentStatus = existingRec ? (existingRec.status === 'Present' ? 'P' : 'A') : '';
+      let nextStatus = currentStatus === '' ? 'P' : currentStatus === 'P' ? 'A' : '';
+      if(existingRec){
+        if(nextStatus === ''){ AppData.attendance = AppData.attendance.filter(r => r !== existingRec); }
+        else { existingRec.status = nextStatus === 'P' ? 'Present' : 'Absent'; }
+      } else if(nextStatus !== ''){
+        AppData.attendance = AppData.attendance || [];
+        AppData.attendance.push({
+          id: 'ATT' + String((AppData.attendance.length+1)).padStart(4,'0'),
+          studentId: student.id, studentName: student.name, admissionNo: student.admissionNo,
+          className: student.currentClass, date: 'Day ' + (di+1),
+          status: nextStatus === 'P' ? 'Present' : 'Absent',
+          time: getCurrentTime(), rcDayIndex: di
+        });
+      }
+      saveToStorage();
+      rcRenderTab();
+    });
+  });
+}
+
+function rcRenderSubjectTab(container, sub){
+  const students = AppData.students || [];
+  if(students.length === 0){ container.innerHTML = '<p style="padding:20px;text-align:center;color:#999;">No students in database.</p>'; return; }
+  let html = '<div class="rc-table-wrap"><table class="rc-table"><thead><tr>';
+  html += '<th rowspan="2">Sr.</th><th rowspan="2">Name</th><th rowspan="2">ID</th>';
+  for(let t = 1; t <= 6; t++) html += `<th colspan="2">Test-${t}</th>`;
+  html += '<th rowspan="2" class="rc-col-total">Total</th><th rowspan="2" class="rc-col-total">Obtained</th><th rowspan="2" class="rc-col-pct">%</th><th rowspan="2" class="rc-col-grade">Grade</th><th rowspan="2" class="rc-col-pos">Position</th>';
+  html += '</tr><tr>';
+  for(let t = 1; t <= 6; t++) html += '<th>TM</th><th>OM</th>';
+  html += '</tr></thead><tbody>';
+  const pctsForRank = [];
+  students.forEach((st, si) => {
+    const tot = rcSubjectTotals(st, sub.key);
+    pctsForRank.push({ index: si, val: tot.pct });
+    html += `<tr><td>${si + 1}</td><td class="rc-subject-name">${st.name}</td><td>${st.admissionNo}</td>`;
+    tot.tests.forEach((t, ti) => {
+      html += `<td><input class="rc-input" type="number" data-si="${si}" data-ti="${ti}" data-field="tm" value="${t.tm}" /></td><td><input class="rc-input" type="number" data-si="${si}" data-ti="${ti}" data-field="om" value="${t.om}" /></td>`;
+    });
+    html += `<td class="rc-col-total">${tot.tm || ''}</td><td class="rc-col-total">${tot.om || ''}</td><td class="rc-col-pct">${tot.tm ? (tot.pct*100).toFixed(1)+'%' : ''}</td><td class="rc-col-grade ${tot.grade==='Fail'?'rc-col-fail':''}">${tot.tm ? tot.grade : ''}</td><td class="rc-col-pos" data-rank-si="${si}"></td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+  const ranks = rcRanks(pctsForRank);
+  container.querySelectorAll('[data-rank-si]').forEach(td => {
+    const si = +td.dataset.rankSi;
+    td.textContent = ranks[si] !== undefined ? ranks[si] : '';
+  });
+  container.querySelectorAll('.rc-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const si = +inp.dataset.si;
+      const ti = +inp.dataset.ti;
+      const field = inp.dataset.field;
+      const student = students[si];
+      if(!student) return;
+      AppData.rcMarks = AppData.rcMarks || {};
+      const key = student.id + '__' + sub.key;
+      AppData.rcMarks[key] = AppData.rcMarks[key] || Array.from({length:6}, () => ({tm:'', om:''}));
+      AppData.rcMarks[key][ti][field] = inp.value === '' ? '' : Number(inp.value);
+      saveToStorage();
+      rcRenderTab();
+    });
+  });
+}
+
+function rcRenderMPRTab(container){
+  const st = (AppData.students || []).find(s => s.id === rcSelectedStudentId);
+  if(!st){ container.innerHTML = '<p style="padding:20px;text-align:center;color:#999;">Select a student from the toolbar above.</p>'; return; }
+  const att = rcAttendanceStats(rcGetAttendance(st));
+  const period = (document.getElementById('rcPeriodInput') || {}).value || RC_PERIOD;
+  let html = `<div class="rc-mpr-card"><div class="rc-mpr-header"><div><div class="rc-student-name">${st.name}</div><div class="rc-meta"><b>Roll No:</b> ${st.admissionNo} &nbsp;|&nbsp; <b>Class:</b> ${RC_CLASS_DISPLAY}</div></div><div class="rc-meta"><b>Period:</b> ${period}<br><b>Attendance:</b> ${(att.pct*100).toFixed(1)}%</div></div><table class="rc-table"><thead><tr><th rowspan="2">Sr.</th><th rowspan="2">Subjects</th>${[1,2,3,4,5,6].map(n=>`<th colspan="2">Test-${n}</th>`).join('')}<th rowspan="2" class="rc-col-total">T.M</th><th rowspan="2" class="rc-col-total">O.M</th><th rowspan="2" class="rc-col-pct">%</th><th rowspan="2" class="rc-col-grade">Grade</th><th rowspan="2">Remarks</th></tr><tr>${[1,2,3,4,5,6].map(()=>'<th>T.M</th><th>O.B</th>').join('')}</tr></thead><tbody>`;
+  let gTM = 0, gOM = 0;
+  RC_SUBJECTS.forEach((sub, idx) => {
+    const tot = rcSubjectTotals(st, sub.key);
+    gTM += tot.tm; gOM += tot.om;
+    const remark = tot.tm ? (tot.pct > 0.85 ? 'Excellent' : tot.pct > 0.75 ? 'V.Good' : tot.pct > 0.65 ? 'Good' : tot.pct > 0.50 ? 'Satisfy' : tot.pct > 0.40 ? 'Poor' : tot.pct > 0.32 ? 'Poor' : 'Poor') : '';
+    html += `<tr><td>${idx + 1}</td><td class="rc-subject-name">${sub.label}</td>${tot.tests.map(t => `<td>${t.tm !== '' ? t.tm : ''}</td><td>${t.om !== '' ? t.om : ''}</td>`).join('')}<td class="rc-col-total">${tot.tm || ''}</td><td class="rc-col-total">${tot.om || ''}</td><td class="rc-col-pct">${tot.tm ? (tot.pct*100).toFixed(1)+'%' : ''}</td><td class="rc-col-grade ${tot.grade==='Fail'?'rc-col-fail':''}">${tot.tm ? tot.grade : ''}</td><td>${remark}</td></tr>`;
+  });
+  const gPct = rcPct(gOM, gTM);
+  html += `<tr class="rc-grand-total"><td colspan="2">GRAND TOTAL</td><td colspan="12"></td><td>${gTM || ''}</td><td>${gOM || ''}</td><td>${gTM ? (gPct*100).toFixed(1)+'%' : ''}</td><td>${gTM ? rcGrade(gPct) : ''}</td><td></td></tr></tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function rcRenderTranscriptTab(container){
+  const students = AppData.students || [];
+  if(students.length === 0){ container.innerHTML = '<p style="padding:20px;text-align:center;color:#999;">No students.</p>'; return; }
+  let html = '<div class="rc-table-wrap"><table class="rc-table"><thead><tr><th rowspan="2">Sr.</th><th rowspan="2">Name</th><th rowspan="2">ID</th>';
+  RC_SUBJECTS.forEach(s => html += `<th colspan="2">${s.label.split(' / ')[0]}</th>`);
+  html += '<th rowspan="2" class="rc-col-total">Total</th><th rowspan="2" class="rc-col-total">Obtained</th><th rowspan="2" class="rc-col-pct">%</th><th rowspan="2" class="rc-col-grade">Grade</th><th rowspan="2" class="rc-col-pos">Pos</th>';
+  html += '</tr><tr>';
+  RC_SUBJECTS.forEach(() => html += '<th>TM</th><th>OM</th>');
+  html += '</tr></thead><tbody>';
+  const overalls = [];
+  students.forEach((st, si) => {
+    let gTM = 0, gOM = 0;
+    let row = `<tr><td>${si + 1}</td><td class="rc-subject-name">${st.name}</td><td>${st.admissionNo}</td>`;
+    RC_SUBJECTS.forEach(sub => {
+      const t = rcSubjectTotals(st, sub.key);
+      gTM += t.tm; gOM += t.om;
+      row += `<td>${t.tm || ''}</td><td>${t.om || ''}</td>`;
+    });
+    const gPct = rcPct(gOM, gTM);
+    overalls.push({ index: si, val: gPct });
+    row += `<td class="rc-col-total">${gTM || ''}</td><td class="rc-col-total">${gOM || ''}</td><td class="rc-col-pct">${gTM ? (gPct*100).toFixed(1)+'%' : ''}</td><td class="rc-col-grade ${gTM && rcGrade(gPct)==='Fail'?'rc-col-fail':''}">${gTM ? rcGrade(gPct) : ''}</td><td class="rc-col-pos" data-rank-si="${si}"></td></tr>`;
+    html += row;
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+  const ranks = rcRanks(overalls);
+  container.querySelectorAll('[data-rank-si]').forEach(td => {
+    const si = +td.dataset.rankSi;
+    td.textContent = ranks[si] !== undefined ? ranks[si] : '';
+  });
+}
+
+function rcSaveAll(){
+  saveToStorage();
+  showToast('✅ Report card saved successfully!', 'success');
+}
+
+function rcPrint(){
+  const period = (document.getElementById('rcPeriodInput') || {}).value || RC_PERIOD;
+  const settings = AppData.schoolSettings || {};
+  const content = document.getElementById('rcTabContent').innerHTML;
+  if(!content){ showToast('⚠️ Nothing to print!', 'error'); return; }
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>Report Card - ${period}</title><style>body{font-family:Arial;padding:12px;background:#fff;color:#333;font-size:10pt;}.school-header{text-align:center;font-size:14pt;font-weight:900;color:#131921;margin-bottom:4px;}.school-subheader{text-align:center;font-size:10pt;color:#565959;margin-bottom:12px;}h2{text-align:center;font-size:12pt;color:#131921;margin:6px 0;}.rc-table{width:100%;border-collapse:collapse;font-size:8pt;}.rc-table th{background:#131921;color:#fff;border:1px solid #232f3e;padding:3px 4px;text-align:center;}.rc-table td{border:1px solid #ccc;padding:2px 3px;text-align:center;}.rc-table tr:nth-child(even) td{background:#f7fafc;}.rc-col-total{background:#fef9c3 !important;font-weight:700;}.rc-col-pct{background:#dcfce7 !important;font-weight:700;}.rc-col-grade{background:#e0e7ff !important;font-weight:700;}.rc-col-pos{background:#fce7f3 !important;font-weight:700;}.rc-col-fail{color:#dc2626;font-weight:700;}.rc-grand-total td{background:#1e3a8a !important;color:#fff !important;font-weight:900;}.rc-att-cell.P{background:#d1fae5 !important;color:#065f46;font-weight:900;}.rc-att-cell.A{background:#fee2e2 !important;color:#991b1b;font-weight:900;}input{display:none !important;}.rc-mpr-card{box-shadow:none;padding:0;}@page{margin:6mm;}</style></head><body><div class="school-header">${settings.schoolName || 'SUBHANI ACADEMY SCHOOL'}</div><div class="school-subheader">${settings.schoolAddress || ''}</div><h2>📋 MONTHLY REPORT CARD — ${period}</h2>${content}<script>window.onload=function(){setTimeout(function(){window.print();setTimeout(function(){window.close()},1000)},400)}<\/script></body></html>`);
+  win.document.close();
+}
+
+function rcWhatsApp(){
+  const st = (AppData.students || []).find(s => s.id === rcSelectedStudentId);
+  if(!st){ showToast('⚠️ Select a student first!', 'error'); return; }
+  const period = (document.getElementById('rcPeriodInput') || {}).value || RC_PERIOD;
+  const settings = AppData.schoolSettings || {};
+  const att = rcAttendanceStats(rcGetAttendance(st));
+  let msg = `*MONTHLY REPORT CARD*\n${settings.schoolName || 'SUBHANI ACADEMY SCHOOL'}\nPeriod: ${period}\n--------------------------------\n👤 *${st.name}*\n🆔 Roll: ${st.admissionNo}\n🏫 Class: ${RC_CLASS_DISPLAY}\n📊 Attendance: ${(att.pct*100).toFixed(1)}%\n--------------------------------\n`;
+  let gTM = 0, gOM = 0;
+  RC_SUBJECTS.forEach(sub => {
+    const t = rcSubjectTotals(st, sub.key);
+    gTM += t.tm; gOM += t.om;
+    if(t.tm){ msg += `${sub.label.split(' / ')[0]}: ${t.om}/${t.tm} (${(t.pct*100).toFixed(1)}%) ${t.grade}\n`; }
+  });
+  const gPct = rcPct(gOM, gTM);
+  msg += `--------------------------------\n*Grand Total:* ${gOM}/${gTM}\n*Overall:* ${(gPct*100).toFixed(1)}% — ${rcGrade(gPct)}\n--------------------------------\n_Generated by School System_`;
+  const phone = (st.contactNumber || st.guardianContact || '').replace(/[^0-9]/g, '');
+  let clean = phone.startsWith('0') ? phone.substring(1) : phone;
+  const cc = (AppData.waSettings && AppData.waSettings.countryCode) || '92';
+  if(!clean.startsWith(cc)) clean = cc + clean;
+  const url = phone ? `https://wa.me/${clean}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  showToast('📱 WhatsApp opened', 'success');
+}
+
+// ================================================================
+// START APPLICATION
+// ================================================================
+window.onload=function(){
+  init();
+};
+</script>
 // ================================================================
 // START APPLICATION
 // ================================================================
