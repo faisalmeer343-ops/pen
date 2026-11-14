@@ -3369,7 +3369,7 @@ function renderMarksheetEntry(){
       <div class="card-title"><span class="prompt">&gt;&gt;&gt;</span> Marksheet Entry <span class="badge">9th Science / Arts – Boys</span></div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
         <div style="font-size:12px;color:var(--text-muted);">
-          <strong>Tip:</strong> Har subject ka Test-1..Test-6 (T.M / O.M) enter karein. Total, %, Grade auto-calculate hoga.
+          <strong>Tip:</strong> Cell pe click karein → seedha number type karein (auto-select). Test ki date aur name upar enter karein.
         </div>
         <div class="btn-group">
           <button class="btn btn-success btn-sm" onclick="saveAllMarksheetData()">💾 Save All Marks</button>
@@ -3392,32 +3392,48 @@ function switchMarksheetTab(key){
   if(btn) btn.classList.add('active');
   renderMarksheetTable(key);
 }
-
 function renderMarksheetTable(subjectKey){
   const container=document.getElementById('marksheetTableContainer');
   if(!container) return;
   const subject=MARKSHEET_SUBJECTS.find(s=>s.key===subjectKey);
   if(!subject){container.innerHTML='<p>Subject not found</p>';return;}
+
+  // Test meta (date + name) — per subject, per test
+  if(!AppData.marksheetTestMeta) AppData.marksheetTestMeta={};
+  if(!AppData.marksheetTestMeta[subjectKey]){
+    AppData.marksheetTestMeta[subjectKey]=[];
+    for(let i=0;i<MS_TEST_COUNT;i++) AppData.marksheetTestMeta[subjectKey].push({date:'',name:'Test-'+(i+1)});
+  }
+  const meta=AppData.marksheetTestMeta[subjectKey];
+
   const students=AppData.students.filter(s=>s.status==='Currently-in'&&(s.currentClass==='9th Science'||s.currentClass==='9th Arts'||s.currentClass==='10th Science'||s.currentClass==='10th Arts'));
   const displayStudents=students.length>0?students:AppData.students.filter(s=>s.status==='Currently-in');
+
+  // Test meta header row
+  let metaHtml=`<tr style="background:#fff8e6;">
+    <th colspan="3" style="text-align:right;font-size:9px;color:#7a5a00;">Test Date / Name →</th>`;
+  meta.forEach((m,i)=>{
+    metaHtml+=`<th colspan="2" style="font-size:9px;padding:3px;">
+      <input type="date" value="${m.date||''}" onchange="updateTestMeta('${subjectKey}',${i},'date',this.value)" style="width:100%;font-size:9px;padding:2px;border:1px solid #ccc;border-radius:3px;" />
+      <input type="text" value="${m.name||''}" placeholder="Test name" onchange="updateTestMeta('${subjectKey}',${i},'name',this.value)" style="width:100%;font-size:9px;padding:2px;margin-top:2px;border:1px solid #ccc;border-radius:3px;" />
+    </th>`;
+  });
+  metaHtml+=`<th colspan="5"></th></tr>`;
+
   let html=`
     <div class="ms-subject-header">
       <div class="subj-title">📚 ${subject.display}</div>
-      <div class="subj-info">Students: ${displayStudents.length} | Tests: ${MS_TEST_COUNT} (T.M / O.M)</div>
+      <div class="subj-info">Students: ${displayStudents.length} | Tests: ${MS_TEST_COUNT}</div>
     </div>
     <div class="table-wrap">
       <table class="ms-table">
         <thead>
+          ${metaHtml}
           <tr>
             <th rowspan="2">Sr.</th>
             <th rowspan="2">Student Name</th>
             <th rowspan="2">Roll No</th>
-            <th colspan="2">Test-1</th>
-            <th colspan="2">Test-2</th>
-            <th colspan="2">Test-3</th>
-            <th colspan="2">Test-4</th>
-            <th colspan="2">Test-5</th>
-            <th colspan="2">Test-6</th>
+            ${Array(MS_TEST_COUNT).fill('<th colspan="2">Test</th>').join('')}
             <th rowspan="2">Total</th>
             <th rowspan="2">Obtained</th>
             <th rowspan="2">%</th>
@@ -3439,8 +3455,8 @@ function renderMarksheetTable(subjectKey){
       <td class="ms-student-name">${stu.name}</td>
       <td><strong>${stu.rollNo||stu.admissionNo}</strong></td>
       ${marks.map((m,i)=>`
-        <td><input type="number" class="ms-tm-input" data-roll="${stu.rollNo||stu.admissionNo}" data-subj="${subjectKey}" data-test="${i}" data-field="tm" value="${m.tm||0}" oninput="onMarksheetInput(this)" /></td>
-        <td><input type="number" class="ms-test-input" data-roll="${stu.rollNo||stu.admissionNo}" data-subj="${subjectKey}" data-test="${i}" data-field="om" value="${m.om||0}" oninput="onMarksheetInput(this)" /></td>
+        <td><input type="number" class="ms-tm-input" data-roll="${stu.rollNo||stu.admissionNo}" data-subj="${subjectKey}" data-test="${i}" data-field="tm" value="${m.tm||0}" onfocus="this.select()" oninput="onMarksheetInput(this)" /></td>
+        <td><input type="number" class="ms-test-input" data-roll="${stu.rollNo||stu.admissionNo}" data-subj="${subjectKey}" data-test="${i}" data-field="om" value="${m.om||0}" onfocus="this.select()" oninput="onMarksheetInput(this)" /></td>
       `).join('')}
       <td class="total-cell">${res.totalTm}</td>
       <td class="total-cell">${res.totalOm}</td>
@@ -3450,10 +3466,20 @@ function renderMarksheetTable(subjectKey){
     </tr>`;
   });
   if(displayStudents.length===0){
-    html+=`<tr><td colspan="20" style="padding:20px;text-align:center;color:var(--text-muted);">No active students. Please add students from Admission.</td></tr>`;
+    html+=`<tr><td colspan="20" style="padding:20px;text-align:center;color:var(--text-muted);">No active students.</td></tr>`;
   }
   html+=`</tbody></table></div>`;
   container.innerHTML=html;
+}
+
+function updateTestMeta(subjectKey,testIdx,field,value){
+  if(!AppData.marksheetTestMeta) AppData.marksheetTestMeta={};
+  if(!AppData.marksheetTestMeta[subjectKey]){
+    AppData.marksheetTestMeta[subjectKey]=[];
+    for(let i=0;i<MS_TEST_COUNT;i++) AppData.marksheetTestMeta[subjectKey].push({date:'',name:'Test-'+(i+1)});
+  }
+  AppData.marksheetTestMeta[subjectKey][testIdx][field]=value;
+  saveToStorage();
 }
 
 function onMarksheetInput(el){
@@ -3464,8 +3490,17 @@ function onMarksheetInput(el){
   const value=parseFloat(el.value)||0;
   const marks=getMarksheetData(roll,subj);
   marks[testIdx][field]=value;
-  // Re-render this row's totals only (simpler: re-render whole table)
-  renderMarksheetTable(activeMarksheetTab);
+
+  // Update only the row totals (not full table — prevents cursor jump)
+  const row=el.closest('tr');
+  const res=calcSubjectResult(roll,subj);
+  const cells=row.querySelectorAll('.total-cell, .pct-cell, .grade-cell');
+  if(cells.length>=4){
+    cells[0].textContent=res.totalTm;
+    cells[1].textContent=res.totalOm;
+    cells[2].textContent=res.pct.toFixed(1)+'%';
+    cells[3].textContent=res.grade;
+  }
 }
 
 function saveAllMarksheetData(){
@@ -3588,8 +3623,8 @@ function loadMPRStudent(){
     rowsHtml+=`<tr>
       <td>${i+1}</td>
       <td style="text-align:left;font-weight:600;">${sub.display}</td>
-      ${marks.map(m=>`<td>${m.tm} / ${m.om}</td>`).join('')}
-      <td style="font-weight:900;color:#131921;">${res.totalTm} / ${res.totalOm}</td>
+      ${marks.map(m=>`<td>${m.om} / ${m.tm}</td>`).join('')}
+      <td style="font-weight:900;color:#131921;">${res.totalOm} / ${res.totalTm}</td>
       <td style="font-weight:900;color:#067d62;">${res.pct.toFixed(1)}%</td>
       <td style="font-weight:900;color:#ff9900;">${res.grade}</td>
     </tr>`;
@@ -3631,10 +3666,10 @@ function loadMPRStudent(){
             <th style="font-size:9px;">Grade</th>
           </tr></thead>
           <tbody>${rowsHtml}
-            <tr style="background:#ebf4ff;font-weight:900;">
+                        <tr style="background:#ebf4ff;font-weight:900;">
               <td colspan="2" style="text-align:right;">GRAND TOTAL</td>
               <td colspan="6"></td>
-              <td>${grandTm} / ${grandOm}</td>
+              <td>${grandOm} / ${grandTm}</td>
               <td style="color:#067d62;">${overallPct.toFixed(1)}%</td>
               <td style="color:#ff9900;">${overallGrade}</td>
             </tr>
@@ -3756,18 +3791,17 @@ function loadTranscript(){
               return `<tr>
                 <td>${i+1}</td>
                 <td style="text-align:left;font-weight:600;">${s.display}</td>
-                <td>${r.totalTm}</td>
-                <td>${r.totalOm}</td>
+                <td>${r.totalOm} / ${r.totalTm}</td>
                 <td style="color:#067d62;font-weight:900;">${r.pct.toFixed(1)}%</td>
                 <td style="color:#ff9900;font-weight:900;">${r.grade}</td>
               </tr>`;
             }).join('')}
-            <tr style="background:#ebf4ff;font-weight:900;">
+                        <tr style="background:#ebf4ff;font-weight:900;">
               <td colspan="2" style="text-align:right;">GRAND TOTAL</td>
-              <td>${overall.grandTm}</td>
-              <td>${overall.grandOm}</td>
-              <td style="color:#067d62;">${overall.pct.toFixed(1)}%</td>
-              <td style="color:#ff9900;">${overall.grade}</td>
+              <td colspan="6"></td>
+              <td>${grandOm} / ${grandTm}</td>
+              <td style="color:#067d62;">${overallPct.toFixed(1)}%</td>
+              <td style="color:#ff9900;">${overallGrade}</td>
             </tr>
           </tbody>
         </table>
@@ -3814,7 +3848,7 @@ function renderResults(){
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Student</th><th>Admission No</th><th>Class</th><th>Exam</th><th>Total</th><th>Obtained</th><th>%</th><th>Grade</th><th>Status</th></tr></thead>
+          <thead><tr><th>Date</th><th>Student</th><th>Admission No</th><th>Class</th><th>Exam</th><th>Obtained</th><th>Total</th><th>%</th><th>Grade</th><th>Status</th></tr></thead>
           <tbody id="resultsTableBody">
   `;
   if(results.length===0){
@@ -3822,7 +3856,7 @@ function renderResults(){
   }else{
     results.slice().reverse().forEach(r=>{
       const statusClass=r.status==='Pass'?'badge-paid':'badge-pending';
-      html+=`<tr><td>${r.date||'N/A'}</td><td>${r.studentName}</td><td>${r.admissionNo||'N/A'}</td><td>${r.className||'N/A'}</td><td>${r.exam||'N/A'}</td><td>${r.totalMarks||0}</td><td>${r.obtainedMarks||0}</td><td>${r.percentage?r.percentage.toFixed(1):0}%</td><td style="color:#ff9900;font-weight:900;">${r.grade||'N/A'}</td><td><span class="badge-status ${statusClass}">${r.status||'N/A'}</span></td></tr>`;
+      html+=`<tr><td>${r.date||'N/A'}</td><td>${r.studentName}</td><td>${r.admissionNo||'N/A'}</td><td>${r.className||'N/A'}</td><td>${r.exam||'N/A'}</td><td>${r.obtainedMarks||0}</td><td>${r.totalMarks||0}</td><td>${r.percentage?r.percentage.toFixed(1):0}%</td><td style="color:#ff9900;font-weight:900;">${r.grade||'N/A'}</td><td><span class="badge-status ${statusClass}">${r.status||'N/A'}</span></td></tr>`;
     });
   }
   html+=`</tbody></table></div></div>`;
@@ -3834,7 +3868,7 @@ function exportResultsPDF(){
   if(!content||content.includes('No results')){showToast('⚠️ No data!','error');return;}
   const settings=AppData.schoolSettings||{};
   const win=window.open('','_blank');
-  win.document.write(`<html><head><title>Results</title><style>body{font-family:Arial;padding:20px;font-size:11pt;}table{width:100%;border-collapse:collapse;}th{background:#131921;color:#fff;padding:8px;}td{border:1px solid #ddd;padding:6px;}</style></head><body><h2>${settings.schoolName||'SUBHANI ACADEMY SCHOOL'}</h2><table><thead><tr><th>Date</th><th>Student</th><th>Admission No</th><th>Class</th><th>Exam</th><th>Total</th><th>Obtained</th><th>%</th><th>Grade</th><th>Status</th></tr></thead><tbody>${content}</tbody></table><script>window.onload=function(){setTimeout(function(){window.print();setTimeout(function(){window.close()},1000)},500)}<\/script></body></html>`);
+  win.document.write(`<html><head><title>Results</title><style>body{font-family:Arial;padding:20px;font-size:11pt;}table{width:100%;border-collapse:collapse;}th{background:#131921;color:#fff;padding:8px;}td{border:1px solid #ddd;padding:6px;}</style></head><body><h2>${settings.schoolName||'SUBHANI ACADEMY SCHOOL'}</h2><table><thead><tr><th>Date</th><th>Student</th><th>Admission No</th><th>Class</th><th>Exam</th><th>Obtained</th><th>Total</th><th>%</th><th>Grade</th><th>Status</th></tr></thead><tbody>${content}</tbody></table><script>window.onload=function(){setTimeout(function(){window.print();setTimeout(function(){window.close()},1000)},500)}<\/script></body></html>`);
   win.document.close();
 }
 
@@ -3845,7 +3879,18 @@ function exportResultsExcel(){
   rows.forEach(row=>{
     const cells=row.querySelectorAll('td');
     if(cells.length>0){
-      data.push({'Date':cells[0]?.textContent||'','Student':cells[1]?.textContent||'','Admission No':cells[2]?.textContent||'','Class':cells[3]?.textContent||'','Exam':cells[4]?.textContent||'','Total':cells[5]?.textContent||'','Obtained':cells[6]?.textContent||'','%':cells[7]?.textContent||'','Grade':cells[8]?.textContent||'','Status':cells[9]?.textContent||''});
+      data.push({
+        'Date':cells[0]?.textContent||'',
+        'Student':cells[1]?.textContent||'',
+        'Admission No':cells[2]?.textContent||'',
+        'Class':cells[3]?.textContent||'',
+        'Exam':cells[4]?.textContent||'',
+        'Obtained':cells[5]?.textContent||'',
+        'Total':cells[6]?.textContent||'',
+        '%':cells[7]?.textContent||'',
+        'Grade':cells[8]?.textContent||'',
+        'Status':cells[9]?.textContent||''
+      });
     }
   });
   exportToExcel(data,'Results_'+getTodayDateFormatted(),AppData.schoolSettings.schoolName);
@@ -3878,23 +3923,74 @@ function renderComparison(){
 }
 
 function loadComparison(){
-  const classFilter=document.getElementById('compClassFilter').value;
   const display=document.getElementById('comparisonDisplay');
-  let students=AppData.students.filter(s=>s.status==='Currently-in');
-  if(classFilter!=='All') students=students.filter(s=>s.currentClass===classFilter);
-  if(students.length===0){
-    display.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px;">No active students found</p>';
+  if(!display){
+    console.warn('comparisonDisplay not found');
     return;
   }
-  let html='';
-  students.forEach(s=>{
-    const roll=s.rollNo||s.admissionNo;
-    const overall=calcOverallForStudent(roll);
-    const attPct=getStudentAttendancePct(s.admissionNo);
-    const status=overall.pct>=33?'PASS':'FAIL';
-    const statusColor=overall.pct>=33?'var(--accent-green)':'var(--accent-red)';
-    const barColor=overall.pct>=70?'green':overall.pct>=50?'gold':'red';
-    html+=`
+
+  // Safe fallbacks
+  const subjectsList = (typeof MARKSHEET_SUBJECTS !== 'undefined') ? MARKSHEET_SUBJECTS : [];
+  if(subjectsList.length === 0){
+    display.innerHTML = '<p style="color:var(--accent-red);text-align:center;padding:20px;">⚠️ MARKSHEET_SUBJECTS not defined. Please check script.</p>';
+    return;
+  }
+
+  const filterEl = document.getElementById('compClassFilter');
+  const classFilter = filterEl ? filterEl.value : 'All';
+
+  let students = (AppData.students || []).filter(s => s.status === 'Currently-in');
+  if(classFilter !== 'All'){
+    students = students.filter(s => s.currentClass === classFilter);
+  }
+
+  if(students.length === 0){
+    display.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">No active students found</p>';
+    return;
+  }
+
+  let html = '';
+  students.forEach(s => {
+    const roll = s.rollNo || s.admissionNo;
+
+    // Safe overall calculation
+    let overall = { grandTm: 0, grandOm: 0, pct: 0, grade: 'N/A' };
+    if(typeof calcOverallForStudent === 'function'){
+      try { overall = calcOverallForStudent(roll); } catch(e){ console.warn('calcOverall error:', e); }
+    }
+
+    // Safe attendance
+    let attPct = 0;
+    if(typeof getStudentAttendancePct === 'function'){
+      try { attPct = getStudentAttendancePct(s.admissionNo); } catch(e){ console.warn('attendance error:', e); }
+    }
+
+    const status = overall.pct >= 33 ? 'PASS' : 'FAIL';
+    const statusColor = overall.pct >= 33 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+    let subjectRowsHtml = '';
+    subjectsList.forEach(sub => {
+      let r = { totalTm: 0, totalOm: 0, pct: 0, grade: 'N/A' };
+      if(typeof calcSubjectResult === 'function'){
+        try { r = calcSubjectResult(roll, sub.key); } catch(e){ console.warn('subject error:', e); }
+      }
+      const bc = r.pct >= 70 ? 'green' : r.pct >= 50 ? 'gold' : 'red';
+      const barColor = bc === 'green' ? 'var(--accent-green)' : bc === 'gold' ? 'var(--accent-gold)' : 'var(--accent-red)';
+      subjectRowsHtml += `
+        <div class="exam-row">
+          <span style="text-align:left;">${sub.label || sub.key}</span>
+          <span>${r.totalOm}</span>
+          <span>${r.totalTm}</span>
+          <span>
+            <strong style="color:${barColor}">${r.pct.toFixed(1)}%</strong>
+            <div class="progress-bar"><div class="fill ${bc}" style="width:${Math.min(r.pct,100)}%"></div></div>
+          </span>
+          <span style="font-weight:900;color:var(--accent-gold);">${r.grade}</span>
+        </div>
+      `;
+    });
+
+    html += `
       <div class="comparison-card">
         <div class="student-header">
           <div>
@@ -3907,31 +4003,20 @@ function loadComparison(){
           </div>
         </div>
         <div class="exam-row header">
-          <span>Subject</span><span>Total</span><span>Obtained</span><span>%</span><span>Grade</span>
+          <span>Subject</span><span>Obtained</span><span>Total</span><span>%</span><span>Grade</span>
         </div>
-        ${MARKSHEET_SUBJECTS.map(sub=>{
-          const r=calcSubjectResult(roll,sub.key);
-          const bc=r.pct>=70?'green':r.pct>=50?'gold':'red';
-          return `<div class="exam-row">
-            <span style="text-align:left;">${sub.label}</span>
-            <span>${r.totalTm}</span>
-            <span>${r.totalOm}</span>
-            <span><strong style="color:${bc==='green'?'var(--accent-green)':bc==='gold'?'var(--accent-gold)':'var(--accent-red)'}">${r.pct.toFixed(1)}%</strong><div class="progress-bar"><div class="fill ${bc}" style="width:${Math.min(r.pct,100)}%"></div></div></span>
-            <span style="font-weight:900;color:var(--accent-gold);">${r.grade}</span>
-          </div>`;
-        }).join('')}
+        ${subjectRowsHtml}
         <div class="summary-row">
           <div class="item"><div class="label">Overall %</div><div class="value" style="color:var(--accent-gold);">${overall.pct.toFixed(1)}%</div></div>
-          <div class="item"><div class="label">Grand Total</div><div class="value">${overall.grandOm}/${overall.grandTm}</div></div>
+          <div class="item"><div class="label">Grand Total</div><div class="value">${overall.grandOm} / ${overall.grandTm}</div></div>
           <div class="item"><div class="label">Grade</div><div class="value" style="color:var(--accent-green);">${overall.grade}</div></div>
           <div class="item"><div class="label">Status</div><div class="value" style="color:${statusColor};">${status}</div></div>
         </div>
       </div>
     `;
   });
-  display.innerHTML=html;
+  display.innerHTML = html;
 }
-
 function printComparison(){
   const content=document.getElementById('comparisonDisplay').innerHTML;
   if(!content||content.includes('Click Load')){showToast('⚠️ Load data first!','error');return;}
@@ -4808,12 +4893,12 @@ function generateSalarySummary(){
             <th style="background:#ff9900;color:#fff;padding:6px;text-align:right;">Net Salary</th>
           </tr></thead>
           <tbody>${tableRows}
-            <tr style="background:#ebf4ff;font-weight:900;border-top:3px solid #131921;">
-              <td colspan="3" style="text-align:right;">GRAND TOTAL</td>
-              <td style="text-align:right;">${formatCurrency(totalBasic)}</td>
-              <td style="text-align:right;color:#067d62;">${formatCurrency(totalCredit)}</td>
-              <td style="text-align:right;color:#b12704;">${formatCurrency(totalDebit)}</td>
-              <td style="text-align:right;color:#131921;font-size:14px;">${formatCurrency(totalNet)}</td>
+                        <tr style="background:#ebf4ff;font-weight:900;">
+              <td colspan="2" style="text-align:right;">GRAND TOTAL</td>
+              <td colspan="6"></td>
+              <td>${grandOm} / ${grandTm}</td>
+              <td style="color:#067d62;">${overallPct.toFixed(1)}%</td>
+              <td style="color:#ff9900;">${overallGrade}</td>
             </tr>
           </tbody>
         </table>
