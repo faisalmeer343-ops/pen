@@ -931,11 +931,25 @@ function setupSidebar(){
     <a data-tab="dashboard"><span class="emoji">📊</span> Dashboard</a>
     <div class="section-label">👨‍🎓 Students</div>
     <a data-tab="students"><span class="emoji">👨‍🎓</span> Students</a>
+        <div class="section-label">📱 WhatsApp Center</div>
+    <a data-tab="whatsappcenter"><span class="emoji">📤</span> Send to Parents</a>
+    <a data-tab="inquiryfollowup"><span class="emoji">📋</span> Inquiry Follow-up</a>
+    <a data-tab="admission"><span class="emoji">📝</span> Admission</a>
+    <a data-tab="inquiry"><span class="emoji">📋</span> Inquiry</a>
+     <a data-tab="dashboard"><span class="emoji">📊</span> Dashboard</a>
+    <div class="section-label">👨‍🎓 Students</div>
+    <a data-tab="students"><span class="emoji">👨‍🎓</span> Students</a>
     <a data-tab="admission"><span class="emoji">📝</span> Admission</a>
     <a data-tab="inquiry"><span class="emoji">📋</span> Inquiry</a>
     <a data-tab="attendance"><span class="emoji">✅</span> Attendance</a>
     <a data-tab="promotion"><span class="emoji">🎓</span> Promotion</a>
-  `;
+    <div class="section-label">📱 WhatsApp Center</div>
+    <a data-tab="whatsappcenter"><span class="emoji">📤</span> Send to Parents</a>
+    <a data-tab="inquiryfollowup"><span class="emoji">📋</span> Inquiry Follow-up</a>
+    <a data-tab="attendance"><span class="emoji">✅</span> Attendance</a>
+    <a data-tab="promotion"><span class="emoji">🎓</span> Promotion</a>
+  `;  
+  
   let roleMenus='';
   if(currentUserRole===ROLES.ADMIN||currentUserRole===ROLES.PRINCIPAL){
     roleMenus=`
@@ -1015,6 +1029,8 @@ function showTab(tabName){
     }
   }
   switch(tabName){
+        case 'whatsappcenter': renderWhatsAppCenter(); break;
+    case 'inquiryfollowup': renderInquiryFollowUp(); break;
     case 'dashboard': renderDashboard(); break;
     case 'students': renderStudents(); break;
     case 'admission': renderAdmission(); break;
@@ -1830,7 +1846,7 @@ function clearAdmissionForm(){
   const nextNum=AppData.students.length+1;
   document.getElementById('admAdmissionNo').value='ADM'+String(nextNum).padStart(4,'0');
   updateSubjectSelection();
-  showToast('🔄 Form cleared!','info');
+  showToast('🔄 Successed!','info');
 }
 
 function saveAdmission(){
@@ -5397,6 +5413,412 @@ function deleteSubjectFromClass(className,subject){
   saveToStorage();
   renderSettings();
   showToast(`🗑️ Subject "${subject}" deleted!`,'info');
+}
+
+// ================================================================
+// WHATSAPP CENTER — Send Fee Voucher / Result / Certificate to Parents
+// ================================================================
+function renderWhatsAppCenter(){
+  const container=document.getElementById('contentArea');
+  const classes=AppData.schoolSettings.classes||[];
+  let html=`
+    <div class="card">
+      <div class="card-title"><span class="prompt">&gt;&gt;&gt;</span> WhatsApp Center — Send to Parents <span class="badge">PDF + Text</span></div>
+      <div style="background:#f0fdf4;padding:10px 14px;border-radius:6px;margin-bottom:12px;border:1px solid #067d62;font-size:12px;">
+        <strong>💡 Kaam kaise karta hai:</strong> Document PDF download hoga, phir WhatsApp khulega with pre-filled message. Parent ko PDF <em>manually attach</em> karna hai (WhatsApp security — 2 second ka kaam).
+      </div>
+
+      <div class="form-row">
+        <label>Class:</label>
+        <select id="waClass" onchange="loadWhatsAppStudents()">
+          <option value="">-- Select Class --</option>
+          ${classes.map(c=>`<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <label>Kya Bhejna Hai:</label>
+        <select id="waDocType" onchange="toggleWaDocOptions()">
+          <option value="feevoucher">🧾 Fee Voucher</option>
+          <option value="result">📊 Result</option>
+          <option value="cert_leaving">📜 Leaving Certificate</option>
+          <option value="cert_character">⭐ Character Certificate</option>
+          <option value="cert_birth">👶 Birth Certificate</option>
+          <option value="custom">✉️ Custom Message Only</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadWhatsAppStudents()">🔄 Load Students</button>
+      </div>
+
+      <div class="form-row" id="waFeeOptions" style="display:flex;">
+        <label>Month:</label>
+        <select id="waFeeMonth">${MONTHS.map(m=>`<option value="${m}" ${m===MONTHS[new Date().getMonth()]?'selected':''}>${m}</option>`).join('')}</select>
+        <label>Year:</label>
+        <select id="waFeeYear">${YEARS.map(y=>`<option value="${y}" ${y===new Date().getFullYear()?'selected':''}>${y}</option>`).join('')}</select>
+      </div>
+
+      <div class="form-row" id="waResultOptions" style="display:none;">
+        <label>Exam:</label>
+        <select id="waResultExam">
+          <option value="Monthly">Monthly</option>
+          <option value="Mid-Term">Mid-Term</option>
+          <option value="Annual">Annual</option>
+          <option value="Test">Test</option>
+          <option value="Final">Final</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label>Message (editable):</label>
+        <textarea id="waCustomMessage" rows="3" style="flex:2;min-width:250px;font-family:var(--font-family);padding:6px 10px;border:1px solid var(--border-color);border-radius:4px;" placeholder="Leave blank for auto message"></textarea>
+      </div>
+
+      <div style="margin:10px 0;">
+        <button class="btn btn-secondary btn-sm" onclick="waSelectAll()">☑️ Select All</button>
+        <button class="btn btn-secondary btn-sm" onclick="waDeselectAll()">☐ Deselect All</button>
+        <button class="btn btn-success btn-sm" onclick="waSendBulk()">📤 Send Selected (Bulk)</button>
+      </div>
+
+      <div id="waStudentList" style="max-height:400px;overflow-y:auto;border:1px solid var(--border-color);border-radius:6px;padding:8px;background:var(--bg-primary);">
+        <p style="color:var(--text-muted);text-align:center;padding:20px;">Select a class to load students</p>
+      </div>
+    </div>
+  `;
+  container.innerHTML=html;
+}
+
+function toggleWaDocOptions(){
+  const type=document.getElementById('waDocType').value;
+  document.getElementById('waFeeOptions').style.display=(type==='feevoucher')?'flex':'none';
+  document.getElementById('waResultOptions').style.display=(type==='result')?'flex':'none';
+}
+
+function loadWhatsAppStudents(){
+  const className=document.getElementById('waClass').value;
+  const container=document.getElementById('waStudentList');
+  if(!className){
+    container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px;">Select a class to load students</p>';
+    return;
+  }
+  const students=AppData.students.filter(s=>s.currentClass===className&&s.status==='Currently-in');
+  if(students.length===0){
+    container.innerHTML=`<p style="color:var(--text-muted);text-align:center;padding:20px;">No active students in ${className}</p>`;
+    return;
+  }
+  let html=`<div style="font-weight:900;color:var(--accent-blue);padding:8px;border-bottom:2px solid var(--accent-gold);margin-bottom:6px;">Total: ${students.length} students</div>`;
+  students.forEach(s=>{
+    const phone=s.contactNumber||s.guardianContact||s.guardianPhone||'';
+    const phoneDisplay=phone?phone:`<span style="color:var(--accent-red);">⚠️ No phone</span>`;
+    html+=`
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border-color);background:#fff;margin-bottom:3px;border-radius:4px;">
+        <input type="checkbox" id="wa_${s.id}" value="${s.id}" ${phone?'':'disabled'} />
+        <label for="wa_${s.id}" style="cursor:pointer;flex:1;font-size:13px;">
+          <strong>${s.admissionNo}</strong> — ${s.name}
+          <span style="color:var(--text-muted);font-size:11px;margin-left:8px;">📞 ${phoneDisplay}</span>
+        </label>
+        ${phone?`<button class="btn btn-success btn-xs" onclick="waSendSingle('${s.id}')">📤 Send</button>`:`<button class="btn btn-secondary btn-xs" disabled>No Phone</button>`}
+      </div>
+    `;
+  });
+  container.innerHTML=html;
+}
+
+function waSelectAll(){
+  document.querySelectorAll('#waStudentList input[type="checkbox"]:not([disabled])').forEach(cb=>cb.checked=true);
+}
+
+function waDeselectAll(){
+  document.querySelectorAll('#waStudentList input[type="checkbox"]').forEach(cb=>cb.checked=false);
+}
+
+function waSendBulk(){
+  const selected=Array.from(document.querySelectorAll('#waStudentList input[type="checkbox"]:checked')).map(cb=>cb.value);
+  if(selected.length===0){showToast('⚠️ Select at least one student!','error');return;}
+  if(selected.length>10){
+    if(!confirm(`${selected.length} parents ko bhejna hai? Har PDF download hogi aur WhatsApp tab khulega. Continue?`)) return;
+  }
+  selected.forEach((id,idx)=>{
+    setTimeout(()=>waSendSingle(id,true),idx*1500); // delay so tabs don't get blocked
+  });
+  showToast(`📤 ${selected.length} messages queue mein. Popups allow karein agar browser block kare.`,'info');
+}
+
+function waSendSingle(studentId,silent){
+  const student=getStudent(studentId);
+  if(!student) return;
+  const docType=document.getElementById('waDocType').value;
+  const phone=(student.contactNumber||student.guardianContact||student.guardianPhone||'').replace(/[^0-9]/g,'');
+  if(!phone){
+    if(!silent) showToast('⚠️ No phone number for '+student.name,'error');
+    return;
+  }
+  const settings=AppData.schoolSettings||{};
+  const schoolName=settings.schoolName||'SUBHANI ACADEMY SCHOOL';
+  let pdfHTML='';
+  let waMessage='';
+
+  // ==== Build PDF HTML + WhatsApp message based on type ====
+  if(docType==='feevoucher'){
+    const month=document.getElementById('waFeeMonth').value;
+    const year=document.getElementById('waFeeYear').value;
+    const challan=AppData.feeChallans.filter(c=>c.studentId===studentId&&c.month===month&&c.year==year).pop();
+    const feeHeads=challan?challan.feeHeads:[{name:'Monthly Fee',amount:student.monthlyFee||0,total:student.monthlyFee||0}];
+    const total=challan?challan.total:(student.monthlyFee||0);
+    const dueDate=challan&&challan.dueDate?formatDate(challan.dueDate):'N/A';
+    pdfHTML=`
+      <div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;border:2px solid #131921;">
+        <div style="text-align:center;border-bottom:2px solid #131921;padding-bottom:10px;">
+          <h2 style="margin:0;">${schoolName}</h2>
+          <p style="margin:4px 0;font-size:12px;">${settings.schoolAddress||''}</p>
+          <p style="margin:0;font-size:11px;">${settings.schoolPhone||''}</p>
+        </div>
+        <h3 style="text-align:center;background:#131921;color:#ff9900;padding:6px;margin:12px 0;">FEE VOUCHER — ${month} ${year}</h3>
+        <table style="width:100%;font-size:13px;margin-bottom:12px;">
+          <tr><td><strong>Admission No:</strong></td><td>${student.admissionNo}</td></tr>
+          <tr><td><strong>Student Name:</strong></td><td>${student.name}</td></tr>
+          <tr><td><strong>Father Name:</strong></td><td>${student.fatherName||''}</td></tr>
+          <tr><td><strong>Class:</strong></td><td>${student.currentClass}</td></tr>
+          <tr><td><strong>Due Date:</strong></td><td>${dueDate}</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#131921;color:#fff;"><th style="padding:6px;text-align:left;">Fee Head</th><th style="padding:6px;text-align:right;">Amount</th></tr></thead>
+          <tbody>
+            ${feeHeads.map(fh=>`<tr><td style="padding:5px;border:1px solid #ddd;">${fh.name}</td><td style="padding:5px;border:1px solid #ddd;text-align:right;">Rs. ${(fh.total||fh.amount||0).toLocaleString()}</td></tr>`).join('')}
+            <tr style="background:#ff9900;color:#fff;font-weight:900;"><td style="padding:6px;text-align:right;">TOTAL</td><td style="padding:6px;text-align:right;">Rs. ${total.toLocaleString()}</td></tr>
+          </tbody>
+        </table>
+        <p style="text-align:center;font-size:11px;color:#666;margin-top:12px;">${schoolName} — Success with Wisdom</p>
+      </div>
+    `;
+    waMessage=`🧾 *Fee Voucher — ${month} ${year}*\n\nDear Parent of *${student.name}*,\nClass: ${student.currentClass}\nTotal Amount: *Rs. ${total.toLocaleString()}*\nDue Date: ${dueDate}\n\nPlease find attached voucher PDF.\n\n— ${schoolName}`;
+  }
+  else if(docType==='result'){
+    const exam=document.getElementById('waResultExam').value;
+    const roll=student.rollNo||student.admissionNo;
+    const overall=calcOverallForStudent(roll);
+    const attPct=getStudentAttendancePct(student.admissionNo);
+    const status=overall.pct>=33?'PASS':'FAIL';
+    pdfHTML=`
+      <div style="font-family:Arial;padding:20px;max-width:700px;margin:auto;border:2px solid #131921;">
+        <div style="text-align:center;border-bottom:2px solid #131921;padding-bottom:10px;">
+          <h2 style="margin:0;">${schoolName}</h2>
+          <p style="margin:4px 0;font-size:12px;">${settings.schoolAddress||''}</p>
+        </div>
+        <h3 style="text-align:center;background:#131921;color:#ff9900;padding:6px;margin:12px 0;">RESULT — ${exam}</h3>
+        <table style="width:100%;font-size:12px;margin-bottom:12px;">
+          <tr><td><strong>Student:</strong> ${student.name}</td><td><strong>Class:</strong> ${student.currentClass}</td></tr>
+          <tr><td><strong>Admission No:</strong> ${student.admissionNo}</td><td><strong>Roll No:</strong> ${student.rollNo||student.admissionNo}</td></tr>
+          <tr><td><strong>Father:</strong> ${student.fatherName||''}</td><td><strong>Attendance:</strong> ${attPct.toFixed(1)}%</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#131921;color:#fff;"><th style="padding:5px;text-align:left;">Subject</th><th style="padding:5px;">Obtained</th><th style="padding:5px;">Total</th><th style="padding:5px;">%</th><th style="padding:5px;">Grade</th></tr></thead>
+          <tbody>
+            ${MARKSHEET_SUBJECTS.map(sub=>{
+              const r=calcSubjectResult(roll,sub.key);
+              return `<tr><td style="padding:4px;border:1px solid #ddd;">${sub.label}</td><td style="padding:4px;border:1px solid #ddd;text-align:center;">${r.totalOm}</td><td style="padding:4px;border:1px solid #ddd;text-align:center;">${r.totalTm}</td><td style="padding:4px;border:1px solid #ddd;text-align:center;">${r.pct.toFixed(1)}%</td><td style="padding:4px;border:1px solid #ddd;text-align:center;">${r.grade}</td></tr>`;
+            }).join('')}
+            <tr style="background:#ebf4ff;font-weight:900;"><td style="padding:5px;text-align:right;">GRAND TOTAL</td><td style="padding:5px;text-align:center;">${overall.grandOm}</td><td style="padding:5px;text-align:center;">${overall.grandTm}</td><td style="padding:5px;text-align:center;">${overall.pct.toFixed(1)}%</td><td style="padding:5px;text-align:center;">${overall.grade}</td></tr>
+          </tbody>
+        </table>
+        <p style="text-align:center;font-weight:900;margin-top:12px;color:${overall.pct>=33?'#067d62':'#b12704'};">Result: ${status} (${overall.pct.toFixed(1)}%)</p>
+        <p style="text-align:center;font-size:11px;color:#666;">${schoolName}</p>
+      </div>
+    `;
+    waMessage=`📊 *Result — ${exam}*\n\nDear Parent of *${student.name}*,\nClass: ${student.currentClass}\nObtained: *${overall.grandOm} / ${overall.grandTm}*\nPercentage: *${overall.pct.toFixed(1)}%*\nGrade: *${overall.grade}*\nResult: *${status}*\nAttendance: ${attPct.toFixed(1)}%\n\nPlease find attached result PDF.\n\n— ${schoolName}`;
+  }
+  else if(docType==='cert_leaving'){
+    pdfHTML=`
+      <div style="font-family:Arial;padding:30px;max-width:700px;margin:auto;border:4px double #131921;">
+        <div style="text-align:center;border-bottom:2px solid #131921;padding-bottom:10px;">
+          <h2 style="margin:0;">${schoolName}</h2>
+          <p style="margin:4px 0;font-size:12px;">${settings.schoolAddress||''}</p>
+        </div>
+        <h2 style="text-align:center;background:#131921;color:#ff9900;padding:8px;margin:16px 0;letter-spacing:2px;">SCHOOL LEAVING CERTIFICATE</h2>
+        <table style="width:100%;font-size:13px;line-height:1.8;">
+          <tr><td><strong>Admission No:</strong></td><td>${student.admissionNo}</td></tr>
+          <tr><td><strong>Student Name:</strong></td><td>${student.name}</td></tr>
+          <tr><td><strong>Father Name:</strong></td><td>${student.fatherName||''}</td></tr>
+          <tr><td><strong>Class:</strong></td><td>${student.currentClass}</td></tr>
+          <tr><td><strong>DOB:</strong></td><td>${student.dob?formatDate(student.dob):'N/A'}</td></tr>
+          <tr><td><strong>Admission Date:</strong></td><td>${student.admissionDate?formatDate(student.admissionDate):'N/A'}</td></tr>
+          <tr><td><strong>Issue Date:</strong></td><td>${getTodayDateFormatted()}</td></tr>
+        </table>
+        <div style="display:flex;justify-content:space-between;margin-top:40px;">
+          <div style="text-align:center;"><div style="border-top:2px solid #000;width:150px;margin:auto;"></div>Class Teacher</div>
+          <div style="text-align:center;"><div style="border-top:2px solid #000;width:150px;margin:auto;"></div>Principal</div>
+        </div>
+      </div>
+    `;
+    waMessage=`📜 *Leaving Certificate*\n\nDear Parent of *${student.name}*,\nClass: ${student.currentClass}\n\nPlease find attached leaving certificate.\n\n— ${schoolName}`;
+  }
+  else if(docType==='cert_character'){
+    pdfHTML=`
+      <div style="font-family:Arial;padding:30px;max-width:700px;margin:auto;border:4px double #131921;">
+        <div style="text-align:center;border-bottom:2px solid #131921;padding-bottom:10px;">
+          <h2 style="margin:0;">${schoolName}</h2>
+          <p style="margin:4px 0;font-size:12px;">${settings.schoolAddress||''}</p>
+        </div>
+        <h2 style="text-align:center;background:#131921;color:#ff9900;padding:8px;margin:16px 0;letter-spacing:2px;">CHARACTER CERTIFICATE</h2>
+        <p style="font-size:14px;line-height:2;text-align:justify;">
+          This is to certify that <strong>${student.name}</strong>, son/daughter of <strong>${student.fatherName||'N/A'}</strong>, 
+          was a student of <strong>${student.currentClass}</strong> at ${schoolName}. 
+          To the best of our knowledge, he/she bears a <strong>good</strong> character and conduct during his/her stay at this institution.
+        </p>
+        <table style="width:100%;font-size:13px;margin-top:20px;">
+          <tr><td><strong>Admission No:</strong></td><td>${student.admissionNo}</td></tr>
+          <tr><td><strong>Class:</strong></td><td>${student.currentClass}</td></tr>
+          <tr><td><strong>Issue Date:</strong></td><td>${getTodayDateFormatted()}</td></tr>
+        </table>
+        <div style="display:flex;justify-content:space-between;margin-top:40px;">
+          <div style="text-align:center;"><div style="border-top:2px solid #000;width:150px;margin:auto;"></div>Class Teacher</div>
+          <div style="text-align:center;"><div style="border-top:2px solid #000;width:150px;margin:auto;"></div>Principal</div>
+        </div>
+      </div>
+    `;
+    waMessage=`⭐ *Character Certificate*\n\nDear Parent of *${student.name}*,\n\nPlease find attached character certificate.\n\n— ${schoolName}`;
+  }
+  else if(docType==='cert_birth'){
+    pdfHTML=`
+      <div style="font-family:Arial;padding:30px;max-width:700px;margin:auto;border:4px double #131921;">
+        <div style="text-align:center;border-bottom:2px solid #131921;padding-bottom:10px;">
+          <h2 style="margin:0;">${schoolName}</h2>
+          <p style="margin:4px 0;font-size:12px;">${settings.schoolAddress||''}</p>
+        </div>
+        <h2 style="text-align:center;background:#131921;color:#ff9900;padding:8px;margin:16px 0;letter-spacing:2px;">BIRTH CERTIFICATE</h2>
+        <table style="width:100%;font-size:13px;line-height:1.8;">
+          <tr><td><strong>Admission No:</strong></td><td>${student.admissionNo}</td></tr>
+          <tr><td><strong>Student Name:</strong></td><td>${student.name}</td></tr>
+          <tr><td><strong>Father Name:</strong></td><td>${student.fatherName||''}</td></tr>
+          <tr><td><strong>Date of Birth:</strong></td><td>${student.dob?formatDate(student.dob):'N/A'}</td></tr>
+          <tr><td><strong>Class:</strong></td><td>${student.currentClass}</td></tr>
+          <tr><td><strong>Issue Date:</strong></td><td>${getTodayDateFormatted()}</td></tr>
+        </table>
+        <div style="display:flex;justify-content:space-between;margin-top:40px;">
+          <div style="text-align:center;"><div style="border-top:2px solid #000;width:150px;margin:auto;"></div>Class Teacher</div>
+          <div style="text-align:center;"><div style="border-top:2px solid #000;width:150px;margin:auto;"></div>Principal</div>
+        </div>
+      </div>
+    `;
+    waMessage=`👶 *Birth Certificate*\n\nDear Parent of *${student.name}*,\n\nPlease find attached birth certificate.\n\n— ${schoolName}`;
+  }
+  else { // custom
+    waMessage=document.getElementById('waCustomMessage').value.trim()||`Dear Parent of *${student.name}*,\n\n— ${schoolName}`;
+  }
+
+  // ==== Download PDF (as HTML print) if not custom ====
+  if(docType!=='custom'&&pdfHTML){
+    const printWin=window.open('','_blank');
+    if(printWin){
+      printWin.document.write(`<html><head><title>${docType} - ${student.name}</title><style>body{margin:0;padding:10px;}</style></head><body>${pdfHTML}<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>`);
+      printWin.document.close();
+    }
+  }
+
+  // ==== Open WhatsApp ====
+  const finalMsg=document.getElementById('waCustomMessage').value.trim()||waMessage;
+  const url=`https://wa.me/${phone}?text=${encodeURIComponent(finalMsg)}`;
+  const waWin=window.open(url,'_blank');
+  if(!waWin&&!silent) showToast('⚠️ Popup blocked. Allow popups for WhatsApp.','error');
+  else if(!silent) showToast('✅ WhatsApp khul gaya. PDF attach karein.','success');
+}
+
+// ================================================================
+// INQUIRY FOLLOW-UP — Thanks for visiting, etc.
+// ================================================================
+function renderInquiryFollowUp(){
+  const container=document.getElementById('contentArea');
+  const inquiries=AppData.inquiries||[];
+  let html=`
+    <div class="card">
+      <div class="card-title"><span class="prompt">&gt;&gt;&gt;</span> Inquiry Follow-up <span class="badge">WhatsApp</span></div>
+      <div style="background:#f0fdf4;padding:10px 14px;border-radius:6px;margin-bottom:12px;border:1px solid #067d62;font-size:12px;">
+        <strong>💡</strong> Jo log inquiry ke liye aaye unko "Thanks for visiting" ya "Follow-up reminder" bhejein.
+      </div>
+      <div class="form-row">
+        <label>Filter:</label>
+        <select id="inqFuStatus" onchange="loadInquiryFollowUp()">
+          <option value="All">All</option>
+          <option value="Pending">Pending</option>
+          <option value="Admitted">Admitted</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+        <label>Template:</label>
+        <select id="inqFuTemplate" onchange="updateInqFollowUpTemplate()">
+          <option value="thanks">🙏 Thanks for Visiting</option>
+          <option value="reminder">🔔 Admission Follow-up Reminder</option>
+          <option value="welcome">🎉 Welcome / Admission Confirmed</option>
+          <option value="custom">✉️ Custom Message</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadInquiryFollowUp()">🔄 Load</button>
+      </div>
+      <div class="form-row">
+        <label>Message (editable):</label>
+        <textarea id="inqFuMessage" rows="3" style="flex:2;min-width:300px;font-family:var(--font-family);padding:6px 10px;border:1px solid var(--border-color);border-radius:4px;"></textarea>
+      </div>
+      <div id="inqFuList" style="margin-top:10px;">
+        <p style="color:var(--text-muted);text-align:center;padding:20px;">Loading...</p>
+      </div>
+    </div>
+  `;
+  container.innerHTML=html;
+  updateInqFollowUpTemplate();
+  loadInquiryFollowUp();
+}
+
+function updateInqFollowUpTemplate(){
+  const tpl=document.getElementById('inqFuTemplate').value;
+  const settings=AppData.schoolSettings||{};
+  const schoolName=settings.schoolName||'SUBHANI ACADEMY SCHOOL';
+  let msg='';
+  if(tpl==='thanks'){
+    msg=`🙏 *Thanks for Visiting ${schoolName}*\n\nDear Parent,\n\nThank you for visiting our school and taking interest in your child's education. We hope you found the visit informative and helpful.\n\nIf you have any questions regarding admission, fees, or facilities, feel free to contact us.\n\nWe look forward to welcoming your child to our family.\n\n— ${schoolName}`;
+  }else if(tpl==='reminder'){
+    msg=`🔔 *Admission Follow-up*\n\nDear Parent,\n\nWe hope you are doing well. This is a gentle reminder regarding your recent inquiry at ${schoolName}. We would love to assist you with the admission process.\n\nIf you need any information or would like to schedule another visit, please contact us.\n\nLooking forward to hearing from you.\n\n— ${schoolName}`;
+  }else if(tpl==='welcome'){
+    msg=`🎉 *Welcome to ${schoolName}!*\n\nDear Parent,\n\nCongratulations! We are delighted to confirm your child's admission. Welcome to our school family.\n\nWe look forward to a wonderful academic journey together. Please contact us for orientation details.\n\n— ${schoolName}`;
+  }
+  const ta=document.getElementById('inqFuMessage');
+  if(ta) ta.value=msg;
+}
+
+function loadInquiryFollowUp(){
+  const filter=document.getElementById('inqFuStatus').value;
+  const container=document.getElementById('inqFuList');
+  let inquiries=AppData.inquiries||[];
+  if(filter!=='All') inquiries=inquiries.filter(i=>i.status===filter);
+  if(inquiries.length===0){
+    container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px;">No inquiries found</p>';
+    return;
+  }
+  let html=`<div style="font-weight:900;color:var(--accent-blue);padding:8px;border-bottom:2px solid var(--accent-gold);margin-bottom:6px;">Total: ${inquiries.length} inquiries</div>`;
+  inquiries.slice().reverse().forEach(i=>{
+    const phone=(i.phone||i.fatherPhone||'').replace(/[^0-9]/g,'');
+    const statusClass=i.status==='Pending'?'badge-pending':i.status==='Admitted'?'badge-paid':'badge-inactive';
+    html+=`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border-color);background:#fff;margin-bottom:3px;border-radius:4px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;font-size:13px;">
+          <strong>${i.name}</strong> — Father: ${i.fatherName||'N/A'}
+          <div style="font-size:11px;color:var(--text-muted);">Class: ${i.currentClass} | Phone: ${phone||'<span style="color:red;">No phone</span>'} | <span class="badge-status ${statusClass}">${i.status}</span></div>
+        </div>
+        ${phone?`
+          <button class="btn btn-success btn-xs" onclick="sendInquiryWhatsApp('${i.id}')">📤 Send</button>
+        `:`<button class="btn btn-secondary btn-xs" disabled>No Phone</button>`}
+      </div>
+    `;
+  });
+  container.innerHTML=html;
+}
+
+function sendInquiryWhatsApp(inquiryId){
+  const inquiry=AppData.inquiries.find(i=>i.id===inquiryId);
+  if(!inquiry){showToast('⚠️ Inquiry not found','error');return;}
+  const phone=(inquiry.phone||inquiry.fatherPhone||'').replace(/[^0-9]/g,'');
+  if(!phone){showToast('⚠️ No phone number','error');return;}
+  let msg=document.getElementById('inqFuMessage').value.trim();
+  if(!msg){showToast('⚠️ Message khaali hai','error');return;}
+  // Personalize with name if not already
+  if(!msg.includes(inquiry.name)){
+    msg=`Dear *${inquiry.name}*'s Parent,\n\n${msg}`;
+  }
+  const url=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+  showToast('✅ WhatsApp khul gaya','success');
 }
 
 // ================================================================
